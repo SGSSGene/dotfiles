@@ -53,8 +53,8 @@ DISABLE_UNTRACKED_FILES_DIRTY="true"
 plugins=(git git-extras tmux autojump git-extras gitfast per-directory-history git-prompt)
 #plugins=()
 #setopt INC_APPEND_HISTORY
-source /usr/share/oh-my-zsh/oh-my-zsh.sh
-source /usr/lib/zsh-git-prompt/zshrc.sh
+source ${HOME}/.local/share/chezmoi/ohmyzsh/oh-my-zsh.sh
+source ${HOME}/.local/share/chezmoi/zsh-git-prompt/zshrc.sh
 #setopt SHARE_HISTORY
 setopt EXTENDED_GLOB
 setopt HIST_IGNORE_ALL_DUPS
