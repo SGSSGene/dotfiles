@@ -1,0 +1,187 @@
+# Path to your oh-my-zsh configuration.
+export LANG=en_US.UTF-8
+export LANGUAGE=en_US.UTF-8
+
+# Use modern completion system
+autoload -Uz compinit
+compinit
+autoload bashcompinit
+bashcompinit
+export TERM=xterm-256color
+
+alias time="/usr/bin/time --verbose"
+export EDITOR="vim"
+DIR="${HOME}/.local/bin"; [[ ":$PATH:" =~ ":${DIR}:" ]] || export PATH="${DIR}${PATH+:$PATH}"
+#export PATH="/home/gene/.local/bin${PATH+:$PATH}"
+
+
+# Set name of the theme to load.
+ZSH_THEME="muse"
+# Example aliases
+# alias zshconfig="mate ~/.zshrc"
+# alias ohmyzsh="mate ~/.oh-my-zsh"
+
+# Set to this to use case-sensitive completion
+# CASE_SENSITIVE="true"
+
+# Comment this out to disable bi-weekly auto-update checks
+# DISABLE_AUTO_UPDATE="true"
+
+# Uncomment to change how often before auto-updates occur? (in days)
+# export UPDATE_ZSH_DAYS=13
+
+# Uncomment following line if you want to disable colors in ls
+# DISABLE_LS_COLORS="true"
+
+# Uncomment following line if you want to disable autosetting terminal title.
+# DISABLE_AUTO_TITLE="true"
+
+# Uncomment following line if you want to disable command autocorrection
+DISABLE_CORRECTION="true"
+
+# Uncomment following line if you want red dots to be displayed while waiting for completion
+COMPLETION_WAITING_DOTS="true"
+
+# Uncomment following line if you want to disable marking untracked files under
+# VCS as dirty. This makes repository status check for large repositories much,
+# much faster.
+DISABLE_UNTRACKED_FILES_DIRTY="true"
+
+# Which plugins would you like to load? (plugins can be found in /usr/share/oh-my-zsh/plugins/*)
+# Custom plugins may be added to ~/.oh-my-zsh/custom/plugins/
+# Example format: plugins=(rails git textmate ruby lighthouse)
+plugins=(git git-extras tmux autojump git-extras gitfast per-directory-history git-prompt)
+#plugins=()
+#setopt INC_APPEND_HISTORY
+source /usr/share/oh-my-zsh/oh-my-zsh.sh
+source /usr/lib/zsh-git-prompt/zshrc.sh
+#setopt SHARE_HISTORY
+setopt EXTENDED_GLOB
+setopt HIST_IGNORE_ALL_DUPS
+HISTSIZE=12000
+SAVEHIST=12000
+HISTFILE=~/.zsh_history
+setopt inc_append_history
+setopt HIST_IGNORE_SPACE
+setopt HIST_NO_FUNCTIONS
+PROMPT=$'$(git_super_status) %{$fg[blue]%}%~%{$reset_color%} '
+
+
+if [ ! $(tty|grep /dev/tty) ] && [ -z "${TMUX}" ]; then
+    tmux attach || tmux new -s default;
+fi
+
+function choosefile() {
+    x="`(git ls-files -co --exclude-standard 2>>/dev/null || ls 2>>/dev/null) | grep -v \\\.busy | sort | fzf --no-mouse --reverse --inline-info --prompt="file: " --exact +s --black --preview='file {}; echo "==="; preview {}'`"
+    if [ -n "$x" ]
+        then
+        print -s open "$x"
+        #vim $x </dev/tty
+        #open "$x"
+    fi
+}
+source /usr/share/fzf/key-bindings.zsh
+source /usr/share/fzf/completion.zsh
+
+__fsel() {
+  local cmd="${FZF_CTRL_T_COMMAND:-"command find -L . -mindepth 1 \\( -path '*/\\.*' -o -fstype 'sysfs' -o -fstype 'devfs' -o -fstype 'devtmpfs' -o -fstype 'proc' \\) -prune \
+    -o -type f -print \
+    -o -type d -print \
+    -o -type l -print 2> /dev/null | cut -b3-"}"
+  setopt localoptions pipefail no_aliases 2> /dev/null
+  eval "$cmd" | FZF_DEFAULT_OPTS="--height ${FZF_TMUX_HEIGHT:-40%} --reverse $FZF_DEFAULT_OPTS $FZF_CTRL_T_OPTS" $(__fzfcmd) "$@" | while read item; do
+    echo -n "${(q)item} "
+  done
+  local ret=$?
+  echo
+  return $ret
+}
+
+fzf-file-widget() {
+  local lastWord=$(echo "${LBUFFER}" | rev | cut -f 1 -d ' ' | rev)
+  local leadingWords=$(echo "${LBUFFER}" | rev | cut --complement -f 1 -d ' ' | rev)
+  local words=(${=LBUFFER})
+  if [ -n "${leadingWords}" ]; then
+    leadingWords="${leadingWords} "
+  fi
+  LBUFFER="${leadingWords}$(fzf-list-files ${lastWord})"
+}
+zle     -N   fzf-file-widget
+bindkey '^f' fzf-file-widget
+
+
+function choosedir() {
+#    x="`find . -type d 2>/dev/null | grep -v "^.$" | sort | dmenu -i -l 20`"
+    x="`find . -type d 2>/dev/null | grep -v "^.$" | sort | fzf`"
+
+    if [ -n "$x" ]
+        then
+        cd $x
+#        print -s vim $x
+#        vim $x </dev/tty
+    fi
+}
+function clearSecondLastEntry() {
+    local HISTFILE=/tmp/rewrite;
+    fc -W
+    cat $HISTFILE | head -n -2 > ${HISTFILE}2
+    cat $HISTFILE | tail -1 >> ${HISTFILE}2
+    mv ${HISTFILE}2 ${HISTFILE}
+    fc -R
+    rm ${HISTFILE}
+}
+function clearLastEntry() {
+    local HISTFILE=/tmp/rewrite;
+    fc -W
+    cat $HISTFILE | head -n -1 > ${HISTFILE}2
+    mv ${HISTFILE}2 ${HISTFILE}
+    fc -R
+    rm ${HISTFILE}
+}
+
+
+setopt histignorespace
+setopt HIST_IGNORE_SPACE
+bindkey -s '^g' ' choosedir;clearSecondLastEntry\n'
+bindkey -s '^b' ' busy; clearLastEntry\n'
+bindkey '^q' per-directory-history-toggle-history
+
+
+zstyle ':completion:*:descriptions' format '%U%B%d%b%u'
+zstyle ':completion:*:warnings' format '%BSorry, no matches for: %d%b'
+
+bindkey "\033[7~" beginning-of-line
+bindkey "\033[8~" end-of-line
+bindkey "^[[4~" end-of-line
+bindkey "^[[1~" beginning-of-line
+
+autoload -U edit-command-line
+# Emacs style
+zle -N edit-command-line
+bindkey '^e^e' edit-command-line
+
+# Load all additional completion styles
+if  [ -e /usr/share/zsh-completion/completions ]; then
+    for i in /usr/share/zsh-completion/completions/*; do
+        source $i
+    done
+fi
+
+# Use make with default 8 threads
+export MAKEFLAGS="-j8"
+
+#export MANPAGER="bat -l man -p"
+export MANPAGER="most"
+
+#source /home/gene/.homebrew
+#export PATH="/home/gene/.config/busy/env/bin${PATH+:$PATH}"
+DIR="/usr/lib/ccache/bin"; [[ ":$PATH:" =~ ":${DIR}:" ]] || export PATH="${DIR}${PATH+:$PATH}"
+#export PATH="/usr/lib/ccache/bin${PATH+:$PATH}"
+
+
+#export MANPATH="/home/gene/.linuxbrew/share/man${MANPATH+:$MANPATH}:"
+#export INFOPATH="/home/gene/.linuxbrew/share/info:${INFOPATH:-}"
+
+alias ls='lsd'
+export CPM_SOURCE_CACHE=${HOME}/.cache/CPM
+
